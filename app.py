@@ -4,33 +4,69 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 import json
+import os
+import psycopg2
 from datetime import datetime
 
-senseBoxId = "6793f4e4c326f20007c34dd2"
-data = requests.get(url=(f"https://api.opensensemap.org/boxes/{senseBoxId}?format:json"))
-content = json.loads(data.content)
-sensors = pd.json_normalize(content['sensors'])
+
+# Database connection setup
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_NAME = os.getenv("DB_NAME", "dash_db")
+DB_USER = os.getenv("DB_USER", "dashuser")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "dashpassword")
+
+# Sensbox setup
+SENSEBOX_ID = os.getenv("SENSEBOX_ID")
+API_URL_FORMAT_BOX = os.getenv("API_URL_FORMAT_BOX")
+
+# A connection function for the Backend
+def get_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
+    )    
+def create_table(table_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        CREATE TABLE IF NOT EXISTS {table_name}(
+            id INT PRIMARY KEY,
+            name VARCHAR(50))
+                   """)
+    try:
+        conn.commit()
+        print(f"Table {table_name} created")
+    except Exception as e:
+        print(f"Creating tabel failed: {e}")
+
+def get_sensor_names():
+    url = API_URL_FORMAT_BOX.format(sensebox_id=SENSEBOX_ID,response_format="json")
+    status_code = requests.get(url).status_code
+    assert status_code , f"Failed fetching data from api {status_code}"
+    
+    sensors = requests.get(url).json().get("sensors")
+    sensor_name = []
+    for sensor in sensors:
+        sensor_name.append(sensor.get('title').replace(" ","").replace(".","_").replace("-","_"))
+    return sensor_name
+
+table_names = get_sensor_names()
+for table in table_names:
+    create_table(table)
 
 
 
-datenow = datetime.now().isoformat() + "Z"
-dateweekb4 = "2025-01-01T00:00:00Z"
-data = requests.get(url=f"https://api.opensensemap.org/boxes/{senseBoxId}/data/6793f4e4c326f20007c34dd3?from-date={dateweekb4}&to-date={datenow}&download=false&format=json")
-json.loads(data.content)
-df2 = pd.DataFrame(json.loads(data.content))[["createdAt","value"]]
-df2["value"] = df2["value"].astype(float)
-fig = px.line(df2,x=df2["createdAt"],y=df2["value"])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app.layout = html.Div([
+    html.H1("Sensor Dashboard"),
+    html.P("Sensor tables initialized.")
+])
 
 
-app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
-
-app.layout = (dash_table.DataTable(data=sensors.to_dict('records')),
-            html.H1(children="""Temperature in Brazzzil"""),
-            dcc.Graph(figure=fig)
-            )
-
-
+# Initialize the Dash app
 if __name__ == '__main__':
-    app.run(debug=True,host="0.0.0.0", port=8050)
+    app.run(debug=True, host="0.0.0.0", port=8050)
     
 

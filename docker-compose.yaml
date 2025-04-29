@@ -1,0 +1,38 @@
+services:
+  dashapp:
+    build: .
+    container_name: dash_app
+    ports:
+      - "8050:8050"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_USER=dashuser
+      - DB_PASSWORD=dashpassword
+      - DB_NAME=dash_db
+      - SENSEBOX_ID=6793f4e4c326f20007c34dd2 # Example Sensebox ID, change as needed
+      - API_URL_FORMAT_BOX=https://api.opensensemap.org/boxes/{sensebox_id}?format={response_format}
+      - API_URL_FORMAT_SENSOR=https://api.opensensemap.org/boxes/{sensebox_id}/data/{sensor_id}?from-date={fromDate}&to-date={toDate}&download=true&format=json
+
+
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    environment:
+      POSTGRES_USER: dashuser 
+      POSTGRES_PASSWORD: dashpassword 
+      POSTGRES_DB: dash_db
+    ports:
+      - "5432:5432" 
+    volumes:
+      - app_backend:/var/lib/postgresql/data 
+      - ./init-db:/docker-entrypoint-initdb.d 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashuser -d dash_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  app_backend:
