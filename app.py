@@ -52,9 +52,19 @@ def get_sensor_names():
         sensor_name.append(sensor.get('title').replace(" ","").replace(".","_").replace("-","_"))
     return sensor_name
 
+def insert_into_table(table_name,column_values:dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+                    INSERT INTO {table_name}
+                    ({column_values.keys()})
+                    VALUES ({column_values.values()})
+                    """)
+
 table_names = get_sensor_names()
 for table in table_names:
     create_table(table)
+
 
 
 
