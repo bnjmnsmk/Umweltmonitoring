@@ -41,16 +41,18 @@ def create_table(table_name):
     except Exception as e:
         print(f"Creating tabel failed: {e}")
 
-def get_sensor_names():
+def get_sensor_names_ids():
     url = API_URL_FORMAT_BOX.format(sensebox_id=SENSEBOX_ID,response_format="json")
     status_code = requests.get(url).status_code
     assert status_code , f"Failed fetching data from api {status_code}"
     
     sensors = requests.get(url).json().get("sensors")
-    sensor_name = []
+    sensor_name_id = {}
     for sensor in sensors:
-        sensor_name.append(sensor.get('title').replace(" ","").replace(".","_").replace("-","_"))
-    return sensor_name
+        name = sensor.get('title').replace(" ","").replace(".","_").replace("-","_")
+        _id = sensor.get('_id')
+        sensor_name_id.update({name : _id})
+    return sensor_name_id
 
 def insert_into_table(table_name,column_values:dict):
     conn = get_connection()
@@ -61,7 +63,7 @@ def insert_into_table(table_name,column_values:dict):
                     VALUES ({column_values.values()})
                     """)
 
-table_names = get_sensor_names()
+table_names = get_sensor_names_ids().keys
 for table in table_names:
     create_table(table)
 
