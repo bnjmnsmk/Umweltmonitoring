@@ -133,25 +133,48 @@ app.layout = html.Div([
 # Initialize the Dash app
 if __name__ == '__main__':
     sensor_dict = get_sensor_names_ids()
-    #Data initalization
+    #Get Time
+    now = datetime.now(timezone.utc) 
+    two_weeeks_ago = now - timedelta(weeks=2) 
+    iso_now = now.isoformat().replace('+00:00','Z')
+    iso_two_weeks_ago = two_weeeks_ago.isoformat().replace('+00:00','Z')
+
+        #Data initalization
     for name, id in sensor_dict.items():
         #Create Tables
         create_table(name)
 
-        #Get Time
-        now = datetime.now(timezone.utc) 
-        two_weeeks_ago = now - timedelta(weeks=2) 
-        iso_now = now.isoformat().replace('+00:00','Z')
-        iso_two_weeks_ago = two_weeeks_ago.isoformat().replace('+00:00','Z')
-
         #Get Data for Tabel
         data = get_data(sensor_id=id,
-                 fromDate=iso_two_weeks_ago,
-                 toDate=iso_now)
+                    fromDate=iso_two_weeks_ago,
+                    toDate=iso_now)
         #Insert Data into table
         bulk_insert_into_table(table_name=name,
-                               data=data)
-    
+                                data=data)
+
+    create_table(table_name='Temperatur')
+
+    id = sensor_dict['Temperatur']
+    data = []
+    for iteration in range(5):
+        print(f"From: {iso_two_weeks_ago} To: {iso_now}")
+        
+        new_data = get_data(sensor_id=id, fromDate=iso_two_weeks_ago, toDate=iso_now)
+        data.extend(new_data)
+
+        # Extract and parse latest time as datetime object
+        last_time_str = new_data[-1]['createdAt'].replace('+00:00', 'Z')
+        last_time = datetime.strptime(last_time_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        
+        print(f'{last_time.isoformat()}')
+
+        # Update range for next loop
+        iso_now = last_time.isoformat().replace('+00:00', 'Z')
+        iso_two_weeks_ago = (last_time - timedelta(weeks=2, seconds=10)).isoformat().replace('+00:00', 'Z')
+        print(f"*UPDATED* From: {iso_two_weeks_ago} To: {iso_now}")
+        
+    bulk_insert_into_table('Temperatur',data=data)
+
 
     app.run(debug=True, host="0.0.0.0", port=8050)
     
