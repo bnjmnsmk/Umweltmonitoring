@@ -278,7 +278,7 @@ if __name__ == "__main__":
                         {'label': 'Last 2 Days', 'value': 2},
                         {'label': 'Last 1 Week', 'value': 7}
                     ],
-                    value=1,
+                    value=7,
                     clearable=False,
                     style={'width': '200px'}
                 ),
@@ -288,13 +288,12 @@ if __name__ == "__main__":
         ], style={'marginBottom': '50px'}),
 
         html.Div([
-            html.H3("Forecast (Last 5 Days + Next 2 Days)"),
+            html.H3("Forecast for next 48 Hours"),
             dcc.Graph(
                 id='forecast-graph',
                 figure=px.line(
                     combined_forecast_df,
                     x='timestamp', y='value', color='type',
-                    title='Temperature Forecast with SARIMA',
                     labels={'value': 'Temperature (°C)', 'timestamp': 'Time', 'type': 'Data'}
                 ).update_layout(template='plotly_white', hovermode='x unified')
             )
@@ -310,7 +309,7 @@ if __name__ == "__main__":
     )
     def update_historical_graph(selected_table, days):
         query = query_map[selected_table]
-        df = pd.read_sql(query, engine)  # ✅ use SQLAlchemy engine here
+        df = pd.read_sql(query, engine)  
 
         df['createdat'] = pd.to_datetime(df['createdat'])
         df.set_index('createdat', inplace=True)
