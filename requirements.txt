@@ -1,8 +1,8 @@
-pandas
-requests
-dash
-dash_bootstrap_components
-plotly.express
-psycopg2-binary
-datetime
-matplotlib
+dash==2.17.0
+dash-bootstrap-components==1.6.0
+pandas==2.2.2
+plotly==5.22.0
+requests==2.32.2
+psycopg2-binary==2.9.9
+sqlalchemy>=2.0
+statsmodels==0.14.1
