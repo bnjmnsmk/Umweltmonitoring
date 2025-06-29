@@ -328,4 +328,4 @@ if __name__ == "__main__":
         return fig
     print("--- Callback made --- \n")
 
-    app.run(debug=True, host="127.0.0.1", port=8050)
+    app.run(debug=True, host="0.0.0.0", port=8050)
