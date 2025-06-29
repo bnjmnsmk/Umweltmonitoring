@@ -175,7 +175,7 @@ app.layout = dbc.Container([
                         className="mb-4"
                     ),
                     dcc.Graph(id='historical-graph')
-                ])
+                ],style={"backgroundColor": "rgba(255, 255, 255, 0.9)", "borderRadius": "15px"})
             ])
         ], md=6),
         dbc.Col([
@@ -191,10 +191,13 @@ app.layout = dbc.Container([
                         ).update_layout(template='plotly_white', hovermode='x unified')
                     )
                 ])
-            ])
+            ],style={"backgroundColor": "rgba(255, 255, 255, 0.9)", "borderRadius": "15px"})
         ], md=6)
     ])
-], fluid=True, className="p-4 bg-light")
+    ], fluid=True, className="p-4", style={
+    "background": "linear-gradient(to right, #d4fc79, #96e6a1)",
+    "minHeight": "100vh"
+    })
 
 # --- Callbacks ---
 @app.callback(
