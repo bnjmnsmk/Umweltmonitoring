@@ -37,6 +37,8 @@ def get_connection():
         password=DB_PASSWORD
     )
 
+
+
 def get_sensor_names_ids():
     url = API_URL_FORMAT_BOX.format(sensebox_id=SENSEBOX_ID, response_format="json")
     response = requests.get(url)
@@ -83,6 +85,40 @@ def create_forecast(df, forecast_hours=48, history_days=5):
     forecast_df['type'] = 'Forecast'
     return pd.concat([hist_df, forecast_df], ignore_index=True)
 
+def update_latest_data():
+    logging.info("Fetching and inserting latest data...")
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    one_hour_ago = now - timedelta(hours=1)
+
+    # Format timestamps to 'YYYY-MM-DDTHH:MM:SSZ'
+    from_str = one_hour_ago.isoformat().replace("+00:00", "Z")
+    to_str = now.isoformat().replace("+00:00", "Z")
+
+    sensor_map = get_sensor_names_ids()
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            for sensor_name, sensor_id in sensor_map.items():
+                try:
+                    raw_data = get_data(sensor_id, from_str, to_str)
+                    resampled = resample_data_one_hour(raw_data)
+
+                    for entry in resampled:
+                        cur.execute(
+                            f"""
+                            INSERT INTO public.{sensor_name.lower()} (createdat, value)
+                            VALUES (%s, %s)
+                            ON CONFLICT (createdat) DO NOTHING;
+                            """,
+                            (entry['createdAt'], entry['value'])
+                        )
+                    logging.info(f"Updated {sensor_name}")
+                except Exception as e:
+                    logging.warning(f"Failed to update {sensor_name}: {e}")
+        conn.commit()
+
+
+
 # --- Table Mapping ---
 query_map = {
     "Temperatur": "SELECT * FROM public.temperatur ORDER BY createdat;",
@@ -106,12 +142,18 @@ combined_forecast_df = create_forecast(initial_df)
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
+    dbc.Col([
+        dbc.Button("🔄 Refresh Data Now", id="refresh-button", color="primary", className="mb-3"),
+        dcc.Interval(id="auto-refresh", interval=3600 * 1000, n_intervals=0)  # 1 hour in milliseconds
+        ])
+    ]),
+    dbc.Row([
         dbc.Col(html.H1("🌿 Environmental Dashboard", className="text-center text-success mb-4"), width=12)
     ]),
     dbc.Row([
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader(html.H4("📊 Pure Historical Data")),
+                dbc.CardHeader(html.H4("📊 Historical Data")),
                 dbc.CardBody([
                     dbc.Label("Select Data Source"),
                     dcc.Dropdown(
@@ -169,6 +211,15 @@ def update_historical_graph(selected_table, days):
     )
     fig.update_layout(template='plotly_white', hovermode='x unified')
     return fig
+
+@app.callback(
+    Output('table-dropdown', 'options'),  # Dummy output to trigger the refresh
+    [Input('refresh-button', 'n_clicks'), Input('auto-refresh', 'n_intervals')],
+    prevent_initial_call=True
+)
+def trigger_data_refresh(n_clicks, n_intervals):
+    update_latest_data()
+    return [{'label': k, 'value': k} for k in query_map]
 
 # --- Run ---
 if __name__ == "__main__":
