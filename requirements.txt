@@ -4,8 +4,7 @@ numpy>=1.21.0  # Required by pandas and statsmodels
 
 # Database and data processing
 sqlalchemy>=1.4.0
-psycopg2-binary>=2.9.0  # Binary version for easier installation
-timescaledb>=2.0.0  # For TimescaleDB support (if using hypertables)
+psycopg2-binary>=2.9.0  # Binary version for easier installation)
 
 # API and networking
 requests>=2.26.0
