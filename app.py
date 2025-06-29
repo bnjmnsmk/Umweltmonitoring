@@ -11,6 +11,12 @@ from datetime import datetime
 from datetime import datetime, timezone, timedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sqlalchemy import create_engine
+import dash
+import dash_bootstrap_components as dbc
+from dash import html, dcc, Input, Output
+import plotly.express as px
+import pandas as pd
+
 
 # Database connection setup
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -191,7 +197,8 @@ if __name__ == "__main__":
     print(f"\n --- Get Connection ---\n")
 
 
-    app = dash.Dash(__name__)
+    # Use a Bootstrap theme
+    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
     app.title = "Temperature Dashboard"
     print("--- Initialize Dash app Name and Title --- \n")
 
@@ -253,52 +260,61 @@ if __name__ == "__main__":
     print("--- Combine for forecast graph --- \n")
 
     # --- Layout ---
-    app.layout = html.Div([
-        html.H1("Environmental Dashboard", style={'textAlign': 'center'}),
+    app.layout = dbc.Container([
+        dbc.Row([
+            dbc.Col(html.H1("🌿 Environmental Dashboard", className="text-center text-success mb-4"), width=12)
+        ]),
 
-        html.Div([
-            html.H3("Pure Historical Data"),
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader(html.H4("📊 Pure Historical Data")),
+                    dbc.CardBody([
+                        dbc.Label("Select Data Source"),
+                        dcc.Dropdown(
+                            id='table-dropdown',
+                            options=[{'label': name, 'value': name} for name in query_map],
+                            value='Temperatur',
+                            className="mb-3"
+                        ),
 
-            html.Div([
-                html.Label("Select Data Source:"),
-                dcc.Dropdown(
-                    id='table-dropdown',
-                    options=[{'label': name, 'value': name} for name in query_map],
-                    value='Temperatur',
-                    style={'width': '300px'}
-                ),
-            ], style={'marginBottom': '10px'}),
+                        dbc.Label("Select Interval"),
+                        dcc.Dropdown(
+                            id='interval-dropdown',
+                            options=[
+                                {'label': 'Last 1 Day', 'value': 1},
+                                {'label': 'Last 2 Days', 'value': 2},
+                                {'label': 'Last 1 Week', 'value': 7}
+                            ],
+                            value=7,
+                            clearable=False,
+                            className="mb-4"
+                        ),
 
-            html.Div([
-                html.Label("Select Interval:"),
-                dcc.Dropdown(
-                    id='interval-dropdown',
-                    options=[
-                        {'label': 'Last 1 Day', 'value': 1},
-                        {'label': 'Last 2 Days', 'value': 2},
-                        {'label': 'Last 1 Week', 'value': 7}
-                    ],
-                    value=7,
-                    clearable=False,
-                    style={'width': '200px'}
-                ),
-            ], style={'marginBottom': '20px'}),
+                        dcc.Graph(id='historical-graph')
+                    ])
+                ])
+            ], md=6),
 
-            dcc.Graph(id='historical-graph')
-        ], style={'marginBottom': '50px'}),
-
-        html.Div([
-            html.H3("Forecast for next 48 Hours"),
-            dcc.Graph(
-                id='forecast-graph',
-                figure=px.line(
-                    combined_forecast_df,
-                    x='timestamp', y='value', color='type',
-                    labels={'value': 'Temperature (°C)', 'timestamp': 'Time', 'type': 'Data'}
-                ).update_layout(template='plotly_white', hovermode='x unified')
-            )
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader(html.H4("🔮 Forecast for Next 48 Hours")),
+                    dbc.CardBody([
+                        dcc.Graph(
+                            id='forecast-graph',
+                            figure=px.line(
+                                combined_forecast_df,
+                                x='timestamp', y='value', color='type',
+                                labels={'value': 'Temperatur', 'timestamp': 'Time', 'type': 'Data'}
+                            ).update_layout(template='plotly_white', hovermode='x unified')
+                        )
+                    ])
+                ])
+            ], md=6)
         ])
-    ])
+    ], fluid=True, className="p-4 bg-light")
+
+
     print("--- Layout made --- \n")
 
     # --- Callback ---
